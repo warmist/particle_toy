@@ -1,4 +1,5 @@
 local lib={}
+local tcod=require("header")
 --utility functions
 function lib.is_in_wall(x,y,data )
 	return data.walls[y+x*data.h+1]
@@ -38,6 +39,9 @@ local tiles_connects={
 
 
 }
+function lib.is_circuit(tile)
+	return tiles_connects[tile]~=nil
+end
 function lib.connects(tile,dx,dy )
 	if dx~= 0 and dy ~=0 then
 		return false
@@ -60,23 +64,32 @@ function lib.make_animated(frames, speed,loop ) -- an animated particle
 	-- body
 end
 --particle callbacks
-function lib.light_fade() --a fading emmisive material
-	-- body
+function lib.tick_fade(p,data) --a fading emmisive material
+	--TODO: emissive rendering should ADD it's light to background
+	if type(p.fore)=='table' then
+		local tmp=require("ffi").new("TCOD_color_t")
+		tmp.r=p.fore.r
+		tmp.g=p.fore.g
+		tmp.b=p.fore.b
+		p.fore=tmp
+	end
+	tcod.color.scale_HSV(p.fore,0.96,0.96)--TODO: @param here
+	p.life=p.life-1
 end
-
-function lib.wall_float( p,data,new_particles )
+function lib.overlay(p,data) --use background image, only change colors
+	p.img=data.image[p.y+p.x*data.h+1][1]
+end
+function lib.move_wall( p,data,new_particles )
 	local nx=p.x+math.random(-1,1)
 	local ny=p.y+math.random(-1,1)
 	if lib.is_in_wall(nx,ny,data) then
 		p.x=nx
 		p.y=ny
-		p.img=data.image[ny+nx*data.h+1][1]
+		return true
 	end
-	p.life=p.life-1
 end
 
-function lib.circuit_float( p,data,new_particles )
-
+function lib.move_circuit( p,data,new_particles )
 	local dx=0
 	local dy=0
 	if math.random()>0.5 then
@@ -88,58 +101,70 @@ function lib.circuit_float( p,data,new_particles )
 	if lib.connects(from_img,dx,dy) then
 		p.x=p.x+dx
 		p.y=p.y+dy
-		p.img=data.image[p.y+p.x*data.h+1][1]
+		return true,dx,dy
+	else
+		return false,dx,dy
 	end
-	--p.life=p.life-1
 end
-function lib.wall_float_decay( p,data,new_particles )
+function lib.move_float(p,data,new_particles)
 	local nx=p.x+math.random(-1,1)
 	local ny=p.y+math.random(-1,1)
-	if lib.is_in_wall(nx,ny,data) then
+	if not lib.is_in_wall(nx,ny,data) then
 		p.x=nx
 		p.y=ny
-		p.img=data:get_tile(nx,ny)[1]
+		return true
 	end
-	if p.life*5>255 then 
-		p.fore.r=255
+end
+function lib.sign(x)
+	if x> 0 then
+		return 1
+	elseif x<0 then
+		return -1
 	else
-		if data.image[p.y+p.x*data.h+1][2] <p.life*5 then
-			p.fore.r=p.life*5
-		else
-			p.life=0
-		end
+		return 0
 	end
-	p.life=p.life-1
 end
-function lib.particle_float(p,data,new_particles)
+function round( x )
+	return math.floor(math.abs(x))*lib.sign(x)
+end
+function lib.move_dir(p)
+	local dir=p.dir or 0
+	local f_part=p.f_part or {0,0}
+	p.f_part=f_part
+	local speed=p.speed or 1
 
-	if math.random()>0.75 then
-		local nx=p.x+math.random(-1,1)
-		local ny=p.y+math.random(-1,1)
-		if not lib.is_in_wall(nx,ny,data) then
-			p.x=nx
-			p.y=ny
-		else
-			p.life=0
-		end
-
+	f_part[1]=math.cos(dir)*speed+f_part[1]
+	f_part[2]=math.sin(dir)*speed+f_part[2]
+	local nx=p.x
+	local ny=p.y
+	if math.abs(f_part[1])>=1 then
+		nx=nx+round(f_part[1])
+		f_part[1]=f_part[1]-round(f_part[1])
 	end
-	p.life=p.life-1
-end
-function lib.particle_laser(p,data,new_particles)
-		local nx=p.x+1
-		
-		if not lib.is_in_wall(nx,p.y,data) then
-			p.x=nx
-		else
-			--table.insert(new_particles,{img=('*'):byte(),x=p.x,y=p.y,fore=lib.copyall(p.fore),back=lib.copyall(p.back),
-			--	tick=lib.particle_float,life=math.random(50,100)})
-			p.x=nx
-			p.tick=lib.circuit_float
-			p.img=data.image[p.y+nx*data.h+1][1]
+	if math.abs(f_part[2])>=1 then
+		ny=ny+round(f_part[2])
+		f_part[2]=f_part[2]-round(f_part[2])
+	end
 
-		end
-	p.life=p.life-1
+	return nx,ny
+end
+function lib.move_meander(p,data)
+	p.dir=p.dir or 0
+	local nx,ny=lib.move_dir(p)
+	p.dir=p.dir+math.random()*0.1-0.05 --TODO: @param here
+	if not lib.is_in_wall(nx,ny,data) then
+		p.x=nx
+		p.y=ny
+		return true
+	end
+end
+function lib.move_laser(p,data,new_particles)
+	local nx,ny=lib.move_dir(p)
+	if not lib.is_in_wall(nx,ny,data) then
+		p.x=nx
+		p.y=ny
+		return true
+	end
 end
 --emmiters
 return lib

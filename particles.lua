@@ -1,5 +1,5 @@
 local ffi=require("ffi")
-local tcod=dofile("header.lua")
+local tcod=require("header")
 local zlib=require("zlib")
 
 local key=ffi.new("TCOD_key_t")
@@ -137,7 +137,13 @@ function tick_emitters(data)
 end
 function draw_particles(data)
 	for i,v in ipairs(data.particles) do
-		tcod.console.put_char_ex(nil,v.x,v.y,v.img,v.fore,v.back)
+		if v.back.r~=255 or v.back.g~=0 or v.back.b~=255 then
+			print(v.back.r,v.back.g,v.back.b)
+			tcod.console.put_char_ex(nil,v.x,v.y,v.img,v.fore,v.back)
+		else
+			tcod.console.set_char(nil,v.x,v.y,v.img)
+			tcod.console.set_char_foreground(nil,v.x,v.y,v.fore)
+		end
 	end
 end
 function decode_callbacks(callbacks)
