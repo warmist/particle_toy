@@ -778,40 +778,6 @@ typedef enum {
  char *TCOD_sys_clipboard_get();
 
 
-typedef void *TCOD_thread_t;
-typedef void *TCOD_semaphore_t;
-typedef void *TCOD_mutex_t;
-typedef void *TCOD_cond_t;
-
- TCOD_thread_t TCOD_thread_new(int (*func)(void *), void *data);
- void TCOD_thread_delete(TCOD_thread_t th);
- int TCOD_sys_get_num_cores();
- void TCOD_thread_wait(TCOD_thread_t th);
-
- TCOD_mutex_t TCOD_mutex_new();
- void TCOD_mutex_in(TCOD_mutex_t mut);
- void TCOD_mutex_out(TCOD_mutex_t mut);
- void TCOD_mutex_delete(TCOD_mutex_t mut);
-
- TCOD_semaphore_t TCOD_semaphore_new(int initVal);
- void TCOD_semaphore_lock(TCOD_semaphore_t sem);
- void TCOD_semaphore_unlock(TCOD_semaphore_t sem);
- void TCOD_semaphore_delete( TCOD_semaphore_t sem);
-
- TCOD_cond_t TCOD_condition_new();
- void TCOD_condition_signal(TCOD_cond_t sem);
- void TCOD_condition_broadcast(TCOD_cond_t sem);
- void TCOD_condition_wait(TCOD_cond_t sem, TCOD_mutex_t mut);
- void TCOD_condition_delete( TCOD_cond_t sem);
-
-typedef void *TCOD_library_t;
- TCOD_library_t TCOD_load_library(const char *path);
- void * TCOD_get_function_address(TCOD_library_t library, const char *function_name);
- void TCOD_close_library(TCOD_library_t);
-
-
-
-
 typedef void (*SDL_renderer_t) (void *sdl_surface);
 
  void TCOD_sys_register_SDL_renderer(SDL_renderer_t renderer);
@@ -1362,7 +1328,7 @@ function parseCdef(input) --todo real C parser...
 	for w in string.gmatch(input, "[^;]+") do
 		if not w:find("typedef") then
 			--print(w)
-			local subSt=w:match("(TCOD_[^ ]+)%([^;]+")
+			local subSt=w:match("(TCOD_[^ ]+) ?%([^;]+")
 			--print("SUBST:",subSt)
 			if subSt  then
 				local fullname=subSt
@@ -1374,6 +1340,7 @@ function parseCdef(input) --todo real C parser...
 				else
 					--todo strange non-TCOD_NAMESPACE_NAME-functions
 					--print("==",subSt)
+					--[==[ ONLY str-things and tcod_line left here]==]
 				end
 			else
 				--todo enums and other crud
