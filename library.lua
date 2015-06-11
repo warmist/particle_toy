@@ -1,7 +1,7 @@
 local lib={}
 local tcod=require("header")
 --utility functions
-function lib.is_in_wall(x,y,data )
+function lib.get_wall(x,y,data )
 	return data.walls[y+x*data.h+1]
 end
 function lib.copyall(a)
@@ -59,11 +59,26 @@ function lib.connects(tile,dx,dy )
 		end
 	end
 end
---particle callback-makers
-function lib.make_animated(frames, speed,loop ) -- an animated particle
-	-- body
-end
 --particle callbacks
+function select_frame(p,frame)
+	p.frame=frame
+	local cur_frame=p.frames[frame]
+	p.img=cur_frame.img
+	if p.anim_fore then
+		p.fore=cur_frame.fore
+	end
+	if p.anim_back then
+		p.back=cur_frame.back
+	end
+end
+function lib.tick_animate(p,data)
+	if !p.animation then error("Particle does not have animation") end
+	select_frame(p,math.fmod(p.frame+1,#p.frames)+1)
+end
+function lib.tick_rand_frame(p,data)
+	if !p.animation then error("Particle does not have animation") end
+	select_frame(p,math.random(1,#p.frames))
+end
 function lib.tick_fade(p,data) --a fading emmisive material
 	--TODO: emissive rendering should ADD it's light to background
 	if type(p.fore)=='table' then
@@ -73,7 +88,7 @@ function lib.tick_fade(p,data) --a fading emmisive material
 		tmp.b=p.fore.b
 		p.fore=tmp
 	end
-	tcod.color.scale_HSV(p.fore,0.96,0.96)--TODO: @param here
+	tcod.color.scale_HSV(p.fore,0.96,1)--TODO: @param here
 	p.life=p.life-1
 end
 function lib.overlay(p,data) --use background image, only change colors
@@ -109,7 +124,7 @@ end
 function lib.move_float(p,data,new_particles)
 	local nx=p.x+math.random(-1,1)
 	local ny=p.y+math.random(-1,1)
-	if not lib.is_in_wall(nx,ny,data) then
+	if not lib.get_wall(nx,ny,data) then
 		p.x=nx
 		p.y=ny
 		return true
@@ -152,7 +167,7 @@ function lib.move_meander(p,data)
 	p.dir=p.dir or 0
 	local nx,ny=lib.move_dir(p)
 	p.dir=p.dir+math.random()*0.1-0.05 --TODO: @param here
-	if not lib.is_in_wall(nx,ny,data) then
+	if not lib.get_wall(nx,ny,data) then
 		p.x=nx
 		p.y=ny
 		return true
@@ -160,7 +175,7 @@ function lib.move_meander(p,data)
 end
 function lib.move_laser(p,data,new_particles)
 	local nx,ny=lib.move_dir(p)
-	if not lib.is_in_wall(nx,ny,data) then
+	if not lib.get_wall(nx,ny,data) then
 		p.x=nx
 		p.y=ny
 		return true
