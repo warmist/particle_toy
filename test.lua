@@ -21,14 +21,15 @@ laser=function(p,data,new_particles)
 		p.x=p.x+1
 		p.tick=circuit
 	end
-	engine.tick_fade(p,data,new_particles)
+	engine.tick_rand_frame(p,data,new_particles)
 end
-
+local anims=engine.load_animated("frames.xp")
+print("Animations loaded:",#anims)
 local particles={
 	a=function (self,data)
 			if data.mouse.lbutton then 
 				table.insert(data.particles,{x=self.x,y=self.y,life=80,img=196,fore=engine.copyall(self.fore),back={r=255,g=0,b=255},
-					tick=laser})
+					tick=laser,frames=anims[3],anim_fore=true,no_loop=true})
 			end
 		end
 }

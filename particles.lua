@@ -86,6 +86,28 @@ function parse_layer(layer,emitter_f)
 	ret.h=layer.h
 	return ret
 end
+function form_rgb(t,off)
+	off=off or 0
+	return {r=t[1+off],g=t[2+off],b=t[3+off]}
+end
+function load_animated(file)
+	local rxfile=load_rex_file(file)
+	local layer=rxfile.layers[1]
+	local ret={}
+	for y=0,layer.h-1 do
+		local frames={}
+		for x=0,layer.w-1 do
+			local cell=layer[y+x*layer.h+1]
+			if cell[1]==0 then
+				break
+			else
+				table.insert(frames,{img=cell[1],fore=form_rgb(cell,1),back=form_rgb(cell,4)})
+			end
+		end
+		table.insert(ret,frames)
+	end
+	return ret
+end
 function draw_layer(layer)
 	local fore=ffi.new("TCOD_color_t")
 	local back=ffi.new("TCOD_color_t")
@@ -195,7 +217,8 @@ function run(map_file,particle_functions )
 	end
 end
 local ret={
-	run=run
+	run=run,
+	load_animated=load_animated
 }
 local lib=require 'library'
 for k,v in pairs(lib) do

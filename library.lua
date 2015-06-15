@@ -72,11 +72,20 @@ function select_frame(p,frame)
 	end
 end
 function lib.tick_animate(p,data)
-	if !p.animation then error("Particle does not have animation") end
-	select_frame(p,math.fmod(p.frame+1,#p.frames)+1)
+	if not p.frames then error("Particle does not have animation") end
+	p.frame=p.frame or 0
+	if p.no_loop then
+		if p.frame<#p.frames then
+			select_frame(p,p.frame+1)
+		else
+			p.life=0
+		end
+	else
+		select_frame(p,math.fmod(p.frame+1,#p.frames)+1)
+	end
 end
 function lib.tick_rand_frame(p,data)
-	if !p.animation then error("Particle does not have animation") end
+	if not p.frames then error("Particle does not have animation") end
 	select_frame(p,math.random(1,#p.frames))
 end
 function lib.tick_fade(p,data) --a fading emmisive material
