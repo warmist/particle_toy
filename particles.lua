@@ -131,41 +131,73 @@ function draw_layer(layer)
 	end
 	end
 end
+function add_particle(data,p)
+	data.particles[p.y+p.x*data.h+1]=p
+end
 function tick_particles(data)
 	local new_list={}
-	for i,v in ipairs(data.particles) do
-		if v.tick then 
-			v.tick(v,data,new_list)
+
+	for x=0,data.w-1 do
+	for y=0,data.h-1 do
+		local v=data.particles[y+x*data.h+1]
+		if v and v.tick then
+			v.ticked=false
 		end
 	end
-
-	local i=1
-	while i <= #data.particles do
-    	if data.particles[i].life<=0 then
-        	table.remove(data.particles, i)
-    	else
-        	i = i + 1
-    	end
 	end
+
+	for x=0,data.w-1 do
+	for y=0,data.h-1 do
+		local v=data.particles[y+x*data.h+1]
+		if v and v.tick and not v.ticked then
+			local lx,ly
+			lx=v.x
+			ly=v.y
+			v.tick(v,data,new_list)
+			if lx~=v.x or ly~=v.y then
+				data.particles[ly+lx*data.h+1]=nil
+				add_particle(data,v)
+			end
+			v.ticked=true
+		end
+	end
+	end
+
+	for x=0,data.w-1 do
+	for y=0,data.h-1 do
+		local p=data.particles[y+x*data.h+1]
+		if p and p.life<=0 then
+			data.particles[y+x*data.h+1]=nil
+		end
+	end
+	end
+
 	for i,v in ipairs(new_list) do
-		table.insert(data.particles,v)
+		add_particle(data,v)
 	end
 end
 function tick_emitters(data)
 	for i,v in ipairs(data.emitters) do
-		if v.emit then v.emit(v,data) end
+		local new_list={}
+		if v.emit then v.emit(v,data,new_list) end
+		for i,v in ipairs(new_list) do
+			add_particle(data,v)
+		end
 		--table.insert(data.particles,{x=v.x,y=v.y,life=math.random(5,25),gravity=false,img=v.img,fore=v.fore,back=v.back})
 	end
 end
 function draw_particles(data)
-	for i,v in ipairs(data.particles) do
-		if v.back.r~=255 or v.back.g~=0 or v.back.b~=255 then
+	for x=0,data.w-1 do
+	for y=0,data.h-1 do
+		local v=data.particles[y+x*data.h+1]
+		if v and ( v.back.r~=255 or v.back.g~=0 or v.back.b~=255 ) then
 			print(v.back.r,v.back.g,v.back.b)
-			tcod.console.put_char_ex(nil,v.x,v.y,v.img,v.fore,v.back)
-		else
-			tcod.console.set_char(nil,v.x,v.y,v.img)
-			tcod.console.set_char_foreground(nil,v.x,v.y,v.fore)
+			tcod.console.put_char_ex(nil,x,y,v.img,v.fore,v.back)
+		elseif v then
+			tcod.console.set_char(nil,x,y,v.img)
+			tcod.console.set_char_foreground(nil,x,y,v.fore)
 		end
+	end
 	end
 end
 function decode_callbacks(callbacks)
